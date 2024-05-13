@@ -19,7 +19,14 @@ public class UserService {
 
     @Value("${request.age}")
     private void setValidAge(String age) {
-        validAge = Integer.parseInt(age);
+        try {
+            int ageInt = Integer.parseInt(age);
+            if (ageInt > 0 && ageInt <= 99) {
+                this.validAge = ageInt;
+            }
+        } catch (NumberFormatException e) {
+            throw new BusinessLogicException("Invalid age set Up");
+        }
     }
 
     public UserService(UserRepository userRepository) {

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -21,6 +23,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -87,6 +90,7 @@ class UserServiceTest {
 
         assertNotNull(registeredUser);
         assertNotNull(registeredUser.getId());
+        assertEquals(simpleUser, registeredUser);
     }
 
     @Test
@@ -97,11 +101,13 @@ class UserServiceTest {
         verify(userRepository, never()).save(any(User.class));
     }
 
+
     @Test
     void givenIncorrectAge_whenRegisterUser_thenThrowException() {
-        simpleUserRequest.setBirthDate(LocalDate.parse("2007-05-25"));
-
+        LocalDate oneDayToValid = LocalDate.now().minusYears(userService.validAge).plusDays(1);
+        simpleUserRequest.setBirthDate(oneDayToValid);
         assertThrows(BusinessLogicException.class, () -> userService.registerUser(simpleUserRequest));
+        verify(userRepository, never()).existsByEmail(simpleUserRequest.getEmail());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -111,6 +117,7 @@ class UserServiceTest {
         user2.setId(2L);
         user2.setEmail("email2@gmail.com");
         user2.setBirthDate(LocalDate.parse("1998-05-25"));
+
         when(userRepository.findAll()).thenReturn(List.of(simpleUser, user2));
 
         List<User> allUsers = userService.getAllUsers();

@@ -7,6 +7,9 @@ import com.clearsolutions.task.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,8 +19,15 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -51,6 +61,10 @@ class UserControllerTest {
                 .address("Kyiv")
                 .phoneNumber("+38095")
                 .build();
+    }
+    static Stream<Arguments> provideJsonData() throws IOException{
+        List<String> jsons = Files.readAllLines(Path.of("src/test/resources/BadJson.txt"));
+        return jsons.stream().map(Arguments::of);
     }
 
     @Test
@@ -108,72 +122,21 @@ class UserControllerTest {
     void givenCorrectUserRequest_whenCreateUser_thenStatusOk() throws Exception {
         Mockito.when(userService.registerUser(any())).thenReturn(simpleUser);
 
-        ResultActions response = mvc.perform(post("/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""));
-
-        response.andExpect(status().isCreated())
-                .andDo(print());
-    }@Test
-    void givenInCorrectUserRequest_whenCreateUser_thenStatusOk() throws Exception {
-
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"email":"afrosin.dm@ytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2025-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2005-13-42","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
+                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "http://localhost/users/" + simpleUser.getId()));
+    }
+    @ParameterizedTest
+    @MethodSource("provideJsonData")
+    void givenInCorrectUserRequest_whenCreateUser_thenStatusOk(String badJson) throws Exception {
 
+        mvc.perform(post("/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(badJson))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -192,81 +155,20 @@ class UserControllerTest {
                 .content(updatedUserJson))
                 .andExpect(status().isNoContent());
     }
-    @Test
-    void givenInCorrectValues_whenUpdateUser_thenReturnBadRequest() throws Exception {
-        String updatedUserJson = """
-            {
-                "email": "updated@gmail.com",
-                "firstName": "updated"
-                "lastName": "updated",
-                "birthDate": "1989-05-01"
-            }
-            """;
+
+    @ParameterizedTest
+    @MethodSource("provideJsonData")
+    void givenInCorrectValues_whenUpdateUser_thenReturnBadRequest(String json) throws Exception {
+        Mockito.doThrow(BusinessLogicException.class).when(userService).updateUserById(eq(999L),any());
+
         mvc.perform(put("/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updatedUserJson))
+                        .content(json))
                 .andExpect(status().isBadRequest());
 
         mvc.perform(put("/users/user"))
                 .andExpect(status().isBadRequest());
 
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dm@ytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2025-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2005-13-42","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isBadRequest());
-
-        Mockito.doThrow(BusinessLogicException.class).when(userService).updateUserById(eq(999L),any());
         mvc.perform(put("/users/999")
                 .contentType(MediaType.APPLICATION_JSON)
                         .content("""
