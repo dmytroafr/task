@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: Task
+  datasource:
+    url: jdbc:h2:mem:testdb
+  jpa:
+    open-in-view: false
+request:
+  age: 18
