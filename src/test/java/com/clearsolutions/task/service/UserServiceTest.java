@@ -84,7 +84,7 @@ class UserServiceTest {
     @Test
     void givenFullCorrectUserRequest_whenRegisterUser_thanReturnUser() {
         when(userRepository.existsByEmail(simpleUser.getEmail())).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(simpleUser);
+        when(userRepository.save(any())).thenReturn(simpleUser);
 
         User registeredUser = userService.registerUser(simpleUserRequest);
 
@@ -98,16 +98,6 @@ class UserServiceTest {
         when(userRepository.existsByEmail(simpleUser.getEmail())).thenReturn(true);
 
         assertThrows(BusinessLogicException.class, () -> userService.registerUser(simpleUserRequest));
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-
-    @Test
-    void givenIncorrectAge_whenRegisterUser_thenThrowException() {
-        LocalDate oneDayToValid = LocalDate.now().minusYears(userService.validAge).plusDays(1);
-        simpleUserRequest.setBirthDate(oneDayToValid);
-        assertThrows(BusinessLogicException.class, () -> userService.registerUser(simpleUserRequest));
-        verify(userRepository, never()).existsByEmail(simpleUserRequest.getEmail());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -152,16 +142,6 @@ class UserServiceTest {
 
         Executable executable = () -> userService.updateUserById(999L, new UserRequest());
         assertThrows(BusinessLogicException.class, executable);
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    public void givenIncorrectAge_whenUpdateUserById_thenThrowException() {
-        simpleUserRequest.setBirthDate(LocalDate.parse("2008-05-25"));
-
-        when(userRepository.findById(ID)).thenReturn(Optional.of(simpleUser));
-
-        assertThrows(BusinessLogicException.class, () -> userService.updateUserById(ID, simpleUserRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -215,18 +195,6 @@ class UserServiceTest {
         when(userRepository.findById(ID)).thenReturn(Optional.empty());
 
         assertThrows(BusinessLogicException.class, () -> userService.patchUpdateUser(ID, new UserRequest()));
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void givenIncorrectBirthDay_whenPatchUpdateUser_thenThrowException() {
-        UserRequest userRequest = UserRequest.builder()
-                .birthDate(LocalDate.parse("2008-05-25"))
-                .build();
-
-        when(userRepository.findById(ID)).thenReturn(Optional.of(simpleUser));
-
-        assertThrows(BusinessLogicException.class, () -> userService.patchUpdateUser(ID, userRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 

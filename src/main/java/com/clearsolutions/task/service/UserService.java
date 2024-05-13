@@ -32,16 +32,8 @@ public class UserService {
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
-    
-    private void ageValidator(LocalDate birthDate) {
-        if (LocalDate.now().minusYears(validAge).isBefore(birthDate)){
-            throw new BusinessLogicException("user must be older than " + validAge + " years");
-        }
-    }
 
     public User registerUser(UserRequest userRequest) {
-
-        ageValidator(userRequest.getBirthDate());
         String newEmail = userRequest.getEmail().toLowerCase();
         if (userRepository.existsByEmail(newEmail)) {
             throw new BusinessLogicException("Email address is already in use");
@@ -60,8 +52,6 @@ public class UserService {
         User user = userRepository
                 .findById(id)
                 .orElseThrow(() -> new BusinessLogicException("user with id " + id + " not found"));
-
-        ageValidator(userRequest.getBirthDate());
 
         String newEmail = userRequest.getEmail().toLowerCase();
         if (userRepository.existsByEmail(newEmail)) {
@@ -96,7 +86,6 @@ public class UserService {
                 .orElseThrow(() -> new BusinessLogicException("user with id " + id + " not found"));
 
         if (userRequest.getBirthDate() != null) {
-            ageValidator(userRequest.getBirthDate());
             user.setBirthDate(userRequest.getBirthDate());
         }
         if(userRequest.getEmail() != null) {

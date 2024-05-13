@@ -13,6 +13,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
@@ -44,6 +45,11 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<Void> createUser(@Valid @RequestBody UserRequest userRequest, UriComponentsBuilder uriBuilder) {
+
+        if (userRequest.getBirthDate().plusYears(userService.validAge).isAfter(LocalDate.now())) {
+            throw new BusinessLogicException ("Invalid birth date");
+        }
+
         User user = userService.registerUser(userRequest);
         URI location = uriBuilder
                 .path("/users/{id}")
@@ -55,6 +61,10 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateUser(@PathVariable Long id,
                                            @Valid @RequestBody UserRequest userRequest) {
+
+        if (userRequest.getBirthDate().plusYears(userService.validAge).isAfter(LocalDate.now())) {
+            throw new BusinessLogicException ("Invalid birth date");
+        }
         userService.updateUserById(id, userRequest);
         return ResponseEntity.noContent().build();
     }
@@ -62,6 +72,11 @@ public class UserController {
     @PatchMapping("/{id}")
     public ResponseEntity<Void> patchUser(@PathVariable Long id,
                                           @RequestBody UserRequest userRequest){
+        Optional<LocalDate> localDateOptional = Optional.ofNullable(userRequest.getBirthDate());
+        if (localDateOptional.isPresent()
+            && userRequest.getBirthDate().plusYears(userService.validAge).isAfter(LocalDate.now())) {
+            throw new BusinessLogicException ("Invalid birth date");
+        }
         userService.patchUpdateUser(id, userRequest);
         return ResponseEntity.noContent().build();
     }

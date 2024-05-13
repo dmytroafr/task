@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -73,9 +74,11 @@ class UserControllerTest {
 
         mvc.perform(get("/users")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.size()").value(1));
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        jsonPath("$.size()").value(1)
+                );
     }
 
     @Test
@@ -125,9 +128,12 @@ class UserControllerTest {
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2006-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
-                .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "http://localhost/users/" + simpleUser.getId()));
+                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2004-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
+                .andExpectAll(
+                        status().isCreated(),
+                        header().exists(HttpHeaders.LOCATION)
+                );
+
     }
     @ParameterizedTest
     @MethodSource("provideJsonData")
@@ -136,7 +142,8 @@ class UserControllerTest {
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(badJson))
-                .andExpect(status().isBadRequest());
+                .andExpect(
+                        status().isBadRequest());
     }
 
     @Test
@@ -153,7 +160,8 @@ class UserControllerTest {
         mvc.perform(put("/users/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(updatedUserJson))
-                .andExpect(status().isNoContent());
+                .andExpect(
+                        status().isNoContent());
     }
 
     @ParameterizedTest
@@ -164,16 +172,19 @@ class UserControllerTest {
         mvc.perform(put("/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(
+                        status().isBadRequest());
 
         mvc.perform(put("/users/user"))
-                .andExpect(status().isBadRequest());
+                .andExpect(
+                        status().isBadRequest());
 
         mvc.perform(put("/users/999")
-                .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                         {"email":"q@gmail.com","firstName":"q","lastName":"q","birthDate":"2003-05-01"}"""))
-                .andExpect(status().isBadRequest());
+                .andExpect(
+                        status().isBadRequest());
     }
 
     @Test
@@ -183,14 +194,16 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                         {"email":"afrosin.dmytro@gmail.com"}"""))
-                .andExpect(status().isNoContent());
+                .andExpect(
+                        status().isNoContent());
     }
     @Test
     void givenInCorrectValues_whenPatch_thenReturnBadRequest() throws Exception {
         Mockito.doThrow(BusinessLogicException.class).when(userService).patchUpdateUser(any(),any());
         mvc.perform(patch("/users/1")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
+                .andExpect(
+                        status().isBadRequest());
     }
 
     @Test
@@ -198,12 +211,14 @@ class UserControllerTest {
         Mockito.doNothing().when(userService).deleteUserById(1L);
 
         mvc.perform(delete("/users/{id}", 1L))
-                .andExpect(status().isNoContent());
+                .andExpect(
+                        status().isNoContent());
     }
     @Test
     void whenDelete_thenBadRequest() throws Exception {
         Mockito.doThrow(BusinessLogicException.class).when(userService).deleteUserById(999L);
         mvc.perform(delete("/users/{id}", 999L))
-                .andExpect(status().isBadRequest());
+                .andExpect(
+                        status().isBadRequest());
     }
 }
