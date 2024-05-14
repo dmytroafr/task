@@ -5,25 +5,24 @@ import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -32,10 +31,9 @@ import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.*;
 
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(UserController.class)
@@ -49,6 +47,15 @@ class UserControllerTest {
 
     private static final Long ID = 1L;
     private User simpleUser;
+    private final String simpleUserJson = """
+                                    {
+                                    "email":"afrosin.dmytro@gmail.com",
+                                    "firstName":"Dmytro",
+                                    "lastName":"Afrosin",
+                                    "birthDate":"2004-05-01",
+                                    "address":"Kyiv",
+                                    "phoneNumber":"+380"
+                                    }""";
 
 
     @BeforeEach
@@ -69,32 +76,41 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("GET /users - return page")
     void whenGetAllUsers_thenReturnListOfUsers() throws Exception {
-        Mockito.when(userService.getAllUsers()).thenReturn(List.of(simpleUser));
+        Page<User> userPage = new PageImpl<>(List.of(simpleUser));
+        when(userService.getAllUsers(any())).thenReturn(userPage);
 
         mvc.perform(get("/users")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.size()").value(1)
+                        jsonPath("$.content.size()").value(1)
                 );
     }
 
     @Test
-    void givenCorrectDateRange_whenGetWithinRange_thenReturnList() throws Exception {
-        Mockito.when(userService.getAllUsersWithin(any(LocalDate.class), any(LocalDate.class)))
-                .thenReturn(List.of(simpleUser));
+    @DisplayName("GET /users/range - with correct range - return page")
+    void givenCorrectDateRange_whenGetWithinRange_thenReturnPage() throws Exception {
+        Page<User> userPage = new PageImpl<>(List.of(simpleUser));
+        when(userService.getAllUsersWithin(any(LocalDate.class), any(LocalDate.class),any(Pageable.class)))
+                .thenReturn(userPage);
 
         mvc.perform(get("/users/range")
                         .param("from","1993-01-01")
-                        .param("to","1998-12-31"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].id").value(simpleUser.getId()))
-                .andExpect(jsonPath("$[0].email").exists());
+                        .param("to","1998-12-31")
+                        .param("page","0")
+                        .param("size","5"))
+                .andExpectAll(
+                        status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        jsonPath("$.content[0].id").value(simpleUser.getId()),
+                        jsonPath("$.content[0].email").exists()
+                );
     }
     @Test
+    @DisplayName("GET /users/range - with incorrect range - 400_BadRequest")
     void givenIncorrectDateRange_whenGetWithinRange_thenStatusBadRequest() throws Exception {
         mvc.perform(get("/users/range")
                         .param("from","1999-12-31")
@@ -122,103 +138,132 @@ class UserControllerTest {
     }
 
     @Test
-    void givenCorrectUserRequest_whenCreateUser_thenStatusOk() throws Exception {
-        Mockito.when(userService.registerUser(any())).thenReturn(simpleUser);
+    @DisplayName("POST /users - with valid json - return 201_Created")
+    void givenValidRequest_whenCreateUser_thenStatusOk() throws Exception {
+        when(userService.registerUser(any(UserRequest.class))).thenReturn(simpleUser);
 
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"email":"afrosin.dmytro@gmail.com","firstName":"Dmytro","lastName":"Afrosin","birthDate":"2004-05-01","address":"Kyiv","phoneNumber":"+380"}"""))
+                .content(simpleUserJson))
                 .andExpectAll(
                         status().isCreated(),
                         header().exists(HttpHeaders.LOCATION)
                 );
-
     }
+
     @ParameterizedTest
     @MethodSource("provideJsonData")
-    void givenInCorrectUserRequest_whenCreateUser_thenStatusOk(String badJson) throws Exception {
-
+    @DisplayName("POST /users - with invalid json/userRequest - return 400_BadRequest")
+    void givenInvalidRequest_whenCreateUser_thenBedRequest(String invalidJson) throws Exception {
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(badJson))
-                .andExpect(
-                        status().isBadRequest());
+                .content(invalidJson))
+                .andExpect(status().isBadRequest());
+    }
+    @Test
+    @DisplayName("POST PUT PATCH /users/{id} - with invalid age - return 400_BedRequest")
+    void givenInvalidAge_whenSendRequest_thenStatusBadRequest() throws Exception {
+        when(userService.getValidAge()).thenReturn(18);
+        mvc.perform(post("/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                                    {
+                                    "email":"afrosin.dmytro@gmail.com",
+                                    "firstName":"Dmytro",
+                                    "lastName":"Afrosin",
+                                    "birthDate":"2008-05-01"
+                                    }"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/users/{id}",1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                    {
+                                    "email":"afrosin.dmytro@gmail.com",
+                                    "firstName":"Dmytro",
+                                    "lastName":"Afrosin",
+                                    "birthDate":"2008-05-01"
+                                    }"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/users/{id}",1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                    {
+                                    "birthDate":"2008-05-01"
+                                    }"""))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/users/{id}",1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNoContent());
     }
 
     @Test
+    @DisplayName("PUT /users/{id} - with correct Id and userRequest - return 204_NoContent")
     void givenCorrectIdAndCorrectJson_whenUpdateUser_thenReturnNoContent() throws Exception {
-        String updatedUserJson = """
-            {
-                "email": "updated@gmail.com",
-                "firstName": "updated",
-                "lastName": "updated",
-                "birthDate": "1989-05-01"
-            }
-            """;
-        Mockito.doNothing().when(userService).updateUserById(eq(1L),any(UserRequest.class));
+        doNothing().when(userService).updateUserById(eq(1L),any(UserRequest.class));
+
         mvc.perform(put("/users/1")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(updatedUserJson))
-                .andExpect(
-                        status().isNoContent());
+                .content(simpleUserJson))
+                .andExpect(status().isNoContent());
     }
 
     @ParameterizedTest
     @MethodSource("provideJsonData")
-    void givenInCorrectValues_whenUpdateUser_thenReturnBadRequest(String json) throws Exception {
-        Mockito.doThrow(BusinessLogicException.class).when(userService).updateUserById(eq(999L),any());
+    @DisplayName("PUT /users/ - with invalid id - return 400_BadRequest")
+    void givenAllInvalidData_whenUpdateUser_thenReturnBadRequest(String json) throws Exception {
+        doThrow(BusinessLogicException.class).when(userService).updateUserById(eq(999L),any());
 
+        // invalid json format and userRequest invalid
         mvc.perform(put("/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(
                         status().isBadRequest());
 
+        // invalid method param
         mvc.perform(put("/users/user"))
-                .andExpect(
-                        status().isBadRequest());
+                .andExpect(status().isBadRequest());
 
+        // invalid id - exception from userService
         mvc.perform(put("/users/999")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"q@gmail.com","firstName":"q","lastName":"q","birthDate":"2003-05-01"}"""))
-                .andExpect(
-                        status().isBadRequest());
+                        .content(simpleUserJson))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
+    @DisplayName("PATCH /users/{id} - with correct data - return 204_NoContent")
     void givenCorrectValues_whenPatch_thenReturnNoContent() throws Exception {
-        Mockito.doNothing().when(userService).patchUpdateUser(eq(999L),any());
+        doNothing().when(userService).patchUpdateUser(any(),any());
+
         mvc.perform(patch("/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                        {"email":"afrosin.dmytro@gmail.com"}"""))
-                .andExpect(
-                        status().isNoContent());
+                        .content(simpleUserJson))
+                .andExpect(status().isNoContent());
     }
     @Test
+    @DisplayName("PATCH /users/{id} - with incorrect data - return 400_BadRequest")
     void givenInCorrectValues_whenPatch_thenReturnBadRequest() throws Exception {
-        Mockito.doThrow(BusinessLogicException.class).when(userService).patchUpdateUser(any(),any());
+        doThrow(BusinessLogicException.class).when(userService).patchUpdateUser(any(),any());
         mvc.perform(patch("/users/1")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(
-                        status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
+    @DisplayName("DELETE /users/{id} - with correct id - return 204_NoContent")
     void givenCorrectId_whenDelete_thenNoContent() throws Exception {
-        Mockito.doNothing().when(userService).deleteUserById(1L);
+        doNothing().when(userService).deleteUserById(1L);
 
         mvc.perform(delete("/users/{id}", 1L))
-                .andExpect(
-                        status().isNoContent());
+                .andExpect(status().isNoContent());
     }
     @Test
+    @DisplayName("DELETE /users/{id} - with wrong id - return 400_Bed_Request ")
     void whenDelete_thenBadRequest() throws Exception {
-        Mockito.doThrow(BusinessLogicException.class).when(userService).deleteUserById(999L);
+        doThrow(BusinessLogicException.class).when(userService).deleteUserById(999L);
         mvc.perform(delete("/users/{id}", 999L))
-                .andExpect(
-                        status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 }

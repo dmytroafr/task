@@ -5,6 +5,8 @@ import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +14,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -26,27 +27,28 @@ public class UserController {
     }
 
     @GetMapping()
-    public ResponseEntity<List<User>> getAllUsersWithoutPagination() {
-        List<User> allUsers = userService.getAllUsers();
+    public ResponseEntity<Page<User>> getAllUsers(Pageable pageable) {
+        Page<User> allUsers = userService.getAllUsers(pageable);
         return ResponseEntity.ok(allUsers);
     }
 
     @GetMapping("/range")
-    public ResponseEntity<List<User>> getAllUsersInRange(@RequestParam(name = "from")
+    public ResponseEntity<Page<User>> getAllUsersInRange(@RequestParam(name = "from")
                                                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
                                                          @RequestParam(name = "to")
-                                                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+                                                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+                                                         Pageable pageable) {
         if (fromDate.isAfter(toDate)) {
             throw new BusinessLogicException ("Invalid date range");
         }
-        List<User> allUsers = userService.getAllUsersWithin(fromDate,toDate);
+        Page<User> allUsers = userService.getAllUsersWithin(fromDate, toDate, pageable);
         return ResponseEntity.ok(allUsers);
     }
 
     @PostMapping
     public ResponseEntity<Void> createUser(@Valid @RequestBody UserRequest userRequest, UriComponentsBuilder uriBuilder) {
 
-        if (userRequest.getBirthDate().plusYears(userService.validAge).isAfter(LocalDate.now())) {
+        if (userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {
             throw new BusinessLogicException ("Invalid birth date");
         }
 
@@ -62,7 +64,7 @@ public class UserController {
     public ResponseEntity<Void> updateUser(@PathVariable Long id,
                                            @Valid @RequestBody UserRequest userRequest) {
 
-        if (userRequest.getBirthDate().plusYears(userService.validAge).isAfter(LocalDate.now())) {
+        if (userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {
             throw new BusinessLogicException ("Invalid birth date");
         }
         userService.updateUserById(id, userRequest);
@@ -74,7 +76,7 @@ public class UserController {
                                           @RequestBody UserRequest userRequest){
         Optional<LocalDate> localDateOptional = Optional.ofNullable(userRequest.getBirthDate());
         if (localDateOptional.isPresent()
-            && userRequest.getBirthDate().plusYears(userService.validAge).isAfter(LocalDate.now())) {
+            && userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {
             throw new BusinessLogicException ("Invalid birth date");
         }
         userService.patchUpdateUser(id, userRequest);

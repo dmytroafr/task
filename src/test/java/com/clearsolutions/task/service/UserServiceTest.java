@@ -4,26 +4,37 @@ import com.clearsolutions.task.User;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.repository.UserRepository;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -80,6 +91,27 @@ class UserServiceTest {
                 .phoneNumber("updated")
                 .build();
     }
+    @ParameterizedTest
+    @ValueSource(strings = {"-1", "-3", "-15", "0", "5","100", "101", "105", "5000"})
+    void givenIncorrectAge_whenSetValid_returnExceptions(String age) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException {
+        Method setValidAge = UserService.class
+                .getDeclaredMethod("setValidAge", String.class);
+
+        setValidAge.setAccessible(true);
+//        assertThrows(BusinessLogicException.class, () -> setValidAge.invoke(userService, age) );
+        try {
+            setValidAge.invoke(userService, age);
+
+        } catch (InvocationTargetException e) {
+
+            assertInstanceOf(BusinessLogicException.class, e.getCause());
+
+            Field declaredField1 = userService.getClass().getDeclaredField("validAge");
+            declaredField1.setAccessible(true);
+            Object validAge = declaredField1.get(userService);
+            assertEquals(18,(int) validAge);
+        }
+    }
 
     @Test
     void givenFullCorrectUserRequest_whenRegisterUser_thanReturnUser() {
@@ -107,13 +139,15 @@ class UserServiceTest {
         user2.setId(2L);
         user2.setEmail("email2@gmail.com");
         user2.setBirthDate(LocalDate.parse("1998-05-25"));
+        Page<User> userPage = new PageImpl<>(List.of(simpleUser, user2), PageRequest.of(0, 5), 1);
 
-        when(userRepository.findAll()).thenReturn(List.of(simpleUser, user2));
+        when(userRepository.findAll(any(Pageable.class))).thenReturn(userPage);
 
-        List<User> allUsers = userService.getAllUsers();
+
+        Page<User> allUsers = userService.getAllUsers(PageRequest.of(1,5));
 
         assertNotNull(allUsers);
-        assertEquals(2, allUsers.size());
+        assertEquals(2, allUsers.getTotalElements());
     }
 
     @Test
@@ -343,11 +377,12 @@ class UserServiceTest {
                         getBirthDate().isAfter(fromDate) && user.
                         getBirthDate().isBefore(toDate))
                 .toList();
-        when(userRepository.findAllByBirthDateBetween(fromDate, toDate)).thenReturn(list);
+        Page<User> users = new PageImpl<>(list);
+        when(userRepository.findAllByBirthDateBetween(fromDate, toDate, PageRequest.of(0,10)))
+                .thenReturn(users);
 
-        List<User> result = userService.getAllUsersWithin(fromDate, toDate);
+        Page<User> result = userService.getAllUsersWithin(fromDate, toDate, PageRequest.of(0,10));
 
-        assertEquals(list, result);
-        assertEquals(7, result.size());
+        assertEquals(7, result.getTotalElements());
     }
 }

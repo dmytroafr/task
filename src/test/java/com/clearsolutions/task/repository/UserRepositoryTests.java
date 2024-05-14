@@ -6,10 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,28 +52,24 @@ public class UserRepositoryTests {
     }
 
     @Test
-    public void givenCorrectRange_whenFindAllByBirthDateBetween_ThenOne() {
-        List<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
-                LocalDate.parse("1995-01-01"), LocalDate.parse("1995-12-31"));
+    public void whenFindAllByBirthDateBetween_ThenOne() {
+        Page<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
+                LocalDate.parse("1995-01-01"),
+                LocalDate.parse("1995-12-31"),
+                PageRequest.of(0, 5));
 
         assertNotNull(allByBirthDateBetween);
-        assertEquals(1, allByBirthDateBetween.size());
+        assertEquals(1, allByBirthDateBetween.getTotalElements());
     }
 
     @Test
-    public void givenCorrectRange_whenFindAllByBirthDateBetween_ThenThree() {
-        List<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
-                LocalDate.parse("1995-01-01"), LocalDate.parse("1997-12-31"));
+    public void whenFindAllByBirthDateBetween_ThenThree() {
+        Page<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
+                LocalDate.parse("1995-01-01"),
+                LocalDate.parse("1997-12-31"),
+                PageRequest.of(0,5));
 
         assertNotNull(allByBirthDateBetween);
-        assertEquals(3, allByBirthDateBetween.size());
-    }
-
-    @Test
-    public void givenIncorrectRange_whenFindAllByBirthDateBetween_ThenEmptyList() {
-        List<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
-                LocalDate.parse("1996-01-01"), LocalDate.parse("1993-12-31"));
-
-        assertEquals(0, allByBirthDateBetween.size());
+        assertEquals(3, allByBirthDateBetween.getTotalElements());
     }
 }

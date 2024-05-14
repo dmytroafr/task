@@ -5,33 +5,44 @@ import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
 
-    public int validAge;
+    private int validAge;
 
     @Value("${request.age}")
-    private void setValidAge(String age) {
-        try {
-            int ageInt = Integer.parseInt(age);
-            if (ageInt > 0 && ageInt <= 99) {
-                this.validAge = ageInt;
-            }
-        } catch (NumberFormatException e) {
-            throw new BusinessLogicException("Invalid age set Up");
+    private void setValidAge(String age) throws Exception{
+
+        int ageInt = Optional.of(Integer.parseInt(age))
+                .orElseThrow(() -> new BusinessLogicException("Invalid age set Up, valid age default is " + age));
+
+        if (ageInt > 0 && ageInt <= 99) {
+            this.validAge = ageInt;
+        } else {
+            this.validAge = 18;
+            throw new BusinessLogicException("Age has to be >0 <=99, valid age default is 18");
         }
+    }
+
+    public int getValidAge() {
+        return validAge;
     }
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
+
 
     public User registerUser(UserRequest userRequest) {
         String newEmail = userRequest.getEmail().toLowerCase();
@@ -43,8 +54,8 @@ public class UserService {
         return userRepository.save(newUser);
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public Page<User> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
     }
 
     public void updateUserById(Long id, UserRequest userRequest) {
@@ -120,7 +131,11 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public List<User> getAllUsersWithin(LocalDate fromDate, LocalDate toDate) {
-        return userRepository.findAllByBirthDateBetween(fromDate, toDate);
+    public Page<User> getAllUsersWithin(LocalDate fromDate, LocalDate toDate, Pageable pageable) {
+        return userRepository
+                .findAllByBirthDateBetween(
+                        fromDate,
+                        toDate,
+                        PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
     }
 }
