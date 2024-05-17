@@ -1,6 +1,7 @@
 package com.clearsolutions.task.controller;
 
 import com.clearsolutions.task.User;
+import com.clearsolutions.task.dto.PatchValidation;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.service.UserService;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -73,7 +75,7 @@ public class UserController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<Void> patchUser(@PathVariable Long id,
-                                          @RequestBody UserRequest userRequest){
+                                         @Validated(PatchValidation.class) @RequestBody UserRequest userRequest){
         Optional<LocalDate> localDateOptional = Optional.ofNullable(userRequest.getBirthDate());
         if (localDateOptional.isPresent()
             && userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {

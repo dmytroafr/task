@@ -2,8 +2,13 @@ spring:
   application:
     name: Task
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:mysql://echem.mysql.ukraine.com.ua:3306/echem_test
+    username: echem_test
+    password: mZ~45Lg9y(
+
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
 request:
   age: 18

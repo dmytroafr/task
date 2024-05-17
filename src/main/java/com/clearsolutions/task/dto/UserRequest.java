@@ -13,6 +13,7 @@ import java.time.LocalDate;
 public class UserRequest {
 
     @NotBlank(message = "email shouldn't be empty")
+    @Email(message = "email is not valid", groups = {PatchValidation.class})
     @Email(message = "email is not valid")
     private String email;
     @NotBlank(message = "first name shouldn't be empty")
@@ -21,6 +22,7 @@ public class UserRequest {
     private String lastName;
     @NotNull(message = "birth date shouldn't be empty")
     @Past(message = "birth date should be in past")
+    @Past(message = "birth date should be in past", groups = {PatchValidation.class})
     private LocalDate birthDate;
     private String address;
     private String phoneNumber;

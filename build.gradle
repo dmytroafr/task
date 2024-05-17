@@ -25,6 +25,7 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     runtimeOnly 'com.h2database:h2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    runtimeOnly 'com.mysql:mysql-connector-j'
 }
 
 tasks.named('test') {
