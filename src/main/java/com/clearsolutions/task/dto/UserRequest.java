@@ -1,6 +1,7 @@
 package com.clearsolutions.task.dto;
 
 import com.clearsolutions.task.validation.PatchValidation;
+import com.clearsolutions.task.validation.PutValidation;
 import com.clearsolutions.task.validation.ValidAge;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -14,19 +15,21 @@ import java.time.LocalDate;
 @Builder
 public class UserRequest {
 
-    @NotBlank(message = "email shouldn't be empty")
-    @Email(message = "email is not valid")
-    @Email(message = "email is not valid", groups = {PatchValidation.class})
+    @NotBlank(message = "Email shouldn't be empty", groups = {PutValidation.class})
+    @Email(message = "Email is not valid", groups = {PutValidation.class, PatchValidation.class})
     private String email;
-    @NotBlank(message = "first name shouldn't be empty")
+
+    @NotBlank(message = "First name shouldn't be empty", groups = {PutValidation.class})
     private String firstName;
-    @NotBlank(message = "last name shouldn't be empty")
+
+    @NotBlank(message = "Last name shouldn't be empty", groups = {PutValidation.class})
     private String lastName;
-    @NotNull(message = "birth date shouldn't be empty")
-    @Past(message = "birth date should be in past")
-    @Past(message = "birth date should be in past", groups = {PatchValidation.class})
-    @ValidAge(message = "User must be at least {validAge} years old")
+
+    @NotNull(message = "Birth date shouldn't be empty", groups = {PutValidation.class})
+    @Past(message = "Birth date should be in past", groups = {PutValidation.class, PatchValidation.class})
+    @ValidAge(groups = {PutValidation.class, PatchValidation.class})
     private LocalDate birthDate;
+
     private String address;
     private String phoneNumber;
 }

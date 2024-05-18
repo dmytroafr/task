@@ -1,50 +1,33 @@
 package com.clearsolutions.task.service;
 
+import com.clearsolutions.task.exception.UserNotFoundException;
 import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
-import com.clearsolutions.task.exception.BusinessLogicException;
+import com.clearsolutions.task.exception.UserAlreadyExistsException;
 import com.clearsolutions.task.repository.UserRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
-//    private int validAge;
-//
-//    @Value("${request.age}")
-//    private void setValidAge(String age) throws Exception {
-//        int ageInt = Optional.of(Integer.parseInt(age))
-//                .orElseThrow(() -> new BusinessLogicException("Invalid age set Up"));
-//        if (ageInt > 0 && ageInt <= 99) {
-//            this.validAge = ageInt;
-//        } else {
-//            this.validAge = 18;
-//            throw new BusinessLogicException("Age has to be >0 <=99, valid age default is 18");
-//        }
-//    }
-//
-//    public int getValidAge() {
-//        return validAge;
-//    }
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-
     public User createUser(UserRequest userRequest) {
         String newEmail = userRequest.getEmail().toLowerCase();
-
         if (userRepository.existsByEmail(newEmail)) {
-            throw new BusinessLogicException("Email address is already in use");
+            throw new UserAlreadyExistsException("Email address is already in use");
         }
-
         User newUser = mapUserRequestToNewUser(userRequest);
         return userRepository.save(newUser);
     }
@@ -57,11 +40,11 @@ public class UserService {
 
         User user = userRepository
                 .findById(id)
-                .orElseThrow(() -> new BusinessLogicException("user with id " + id + " not found"));
+                .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
 
         String newEmail = userRequest.getEmail().toLowerCase();
         if (userRepository.existsByEmail(newEmail)) {
-            throw new BusinessLogicException("Email address is already in use");
+            throw new UserAlreadyExistsException("Email address is already in use");
         }
         User updatedUser = mapUserRequestToUser(userRequest, user);
         userRepository.save(updatedUser);
@@ -73,6 +56,7 @@ public class UserService {
     }
 
     private User mapUserRequestToUser(UserRequest userRequest, User user) {
+//        if (userRequest.getEmail()!= null)
         user.setEmail(userRequest.getEmail());
         user.setFirstName(userRequest.getFirstName());
         user.setLastName(userRequest.getLastName());
@@ -89,7 +73,7 @@ public class UserService {
     public void deleteUserById(Long id) {
         User user = userRepository
                 .findById(id)
-                .orElseThrow(() -> new BusinessLogicException("user with id " + id + " not found"));
+                .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
         userRepository.delete(user);
     }
 
@@ -97,7 +81,7 @@ public class UserService {
 
         User user = userRepository
                 .findById(id)
-                .orElseThrow(() -> new BusinessLogicException("user with id " + id + " not found"));
+                .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
 
         if (userRequest.getBirthDate() != null) {
             user.setBirthDate(userRequest.getBirthDate());
@@ -105,7 +89,7 @@ public class UserService {
         if (userRequest.getEmail() != null) {
             String newEmail = userRequest.getEmail().toLowerCase();
             if (newEmail.equals(user.getEmail()) || userRepository.existsByEmail(newEmail)) {
-                throw new BusinessLogicException("Email address is already in use");
+                throw new UserAlreadyExistsException("Email address is already in use");
             }
             user.setEmail(newEmail);
         }
@@ -129,10 +113,11 @@ public class UserService {
     }
 
     public Page<User> getAllUsersWithin(LocalDate fromDate, LocalDate toDate, Pageable pageable) {
+        if (fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException("\"From\" date cannot be after \"To\" date");
+        }
         return userRepository
                 .findAllByBirthDateBetween(
-                        fromDate,
-                        toDate,
-                        PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
+                        fromDate, toDate, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
     }
 }

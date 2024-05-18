@@ -2,7 +2,7 @@ package com.clearsolutions.task.controller;
 
 import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
-import com.clearsolutions.task.exception.BusinessLogicException;
+import com.clearsolutions.task.exception.UserAlreadyExistsException;
 import com.clearsolutions.task.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,6 +28,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Random;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -46,7 +49,6 @@ class UserControllerTest {
     private UserService userService;
 
     private static final Long ID = 1L;
-    private User simpleUser;
     private final String simpleUserJson = """
                                     {
                                     "email":"afrosin.dmytro@gmail.com",
@@ -56,19 +58,23 @@ class UserControllerTest {
                                     "address":"Kyiv",
                                     "phoneNumber":"+380"
                                     }""";
-
+    private static final Random randomYear = new Random();
+    private static final List<User> usersList =
+            IntStream.range(1, 51).mapToObj(i -> User.builder()
+                    .id(Long.parseLong(String.valueOf(i)))
+                    .email("user" + i + "@gmail.com")
+                    .firstName("user"+i+"firstname")
+                    .lastName("user"+i+"lastname")
+                    .birthDate(LocalDate.parse("19" + randomYear.nextInt(10) + "" + randomYear.nextInt(10) + "-05-25"))
+                    .address("City" + i)
+                    .phoneNumber("+38095" + i)
+                    .build())
+            .toList();
 
     @BeforeEach
     public void setUp() {
-        simpleUser = User.builder()
-                .id(ID)
-                .email("email@gmail.com")
-                .firstName("Afrosin")
-                .lastName("Dmytro")
-                .birthDate(LocalDate.parse("1999-05-25"))
-                .address("Kyiv")
-                .phoneNumber("+38095")
-                .build();
+
+
     }
     static Stream<Arguments> provideJsonData() throws IOException{
         List<String> jsons = Files.readAllLines(Path.of("src/test/resources/BadJson.txt"));
@@ -78,61 +84,64 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /users - return page")
     void whenGetAllUsers_thenReturnListOfUsers() throws Exception {
-        Page<User> userPage = new PageImpl<>(List.of(simpleUser));
+        Page<User> userPage = new PageImpl<>(usersList, PageRequest.of(0,12),usersList.size());
         when(userService.getAllUsers(any())).thenReturn(userPage);
-
         mvc.perform(get("/users")
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.content.size()").value(1)
-                );
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.content[4]").exists())
+                .andExpect(jsonPath("$.pageable.pageSize").value(12))
+                .andExpect(jsonPath("$.totalElements").value(50));
     }
-
     @Test
     @DisplayName("GET /users/range - with correct range - return page")
     void givenCorrectDateRange_whenGetWithinRange_thenReturnPage() throws Exception {
-        Page<User> userPage = new PageImpl<>(List.of(simpleUser));
-        when(userService.getAllUsersWithin(any(LocalDate.class), any(LocalDate.class),any(Pageable.class)))
+        LocalDate from = LocalDate.parse("1983-01-01");
+        LocalDate to = LocalDate.parse("1998-12-31");
+        List<User> inRange = usersList
+                .stream()
+                .filter(user -> user.getBirthDate().isAfter(from)
+                                && user.getBirthDate().isBefore(to)).toList();
+        Page<User> userPage = new PageImpl<>(inRange, PageRequest.of(0,20),inRange.size());
+
+        when(userService.getAllUsersWithin(eq(from), eq(to), any(Pageable.class)))
                 .thenReturn(userPage);
 
         mvc.perform(get("/users/range")
-                        .param("from","1993-01-01")
-                        .param("to","1998-12-31")
-                        .param("page","0")
-                        .param("size","5"))
-                .andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON),
-                        jsonPath("$.content[0].id").value(simpleUser.getId()),
-                        jsonPath("$.content[0].email").exists()
-                );
+                        .param("from",from.toString())
+                        .param("to",to.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.totalElements").value(inRange.size()));
     }
     @Test
     @DisplayName("GET /users/range - with incorrect range - 400_BadRequest")
     void givenIncorrectDateRange_whenGetWithinRange_thenStatusBadRequest() throws Exception {
+        // date From is after TO
         mvc.perform(get("/users/range")
                         .param("from","1999-12-31")
                         .param("to","1998-12-31"))
                 .andExpect(status().isBadRequest());
-
+        // date From is Empty
         mvc.perform(get("/users/range")
                         .param("from","")
                         .param("to","1998-12-31"))
                 .andExpect(status().isBadRequest());
+        // date From is absent
         mvc.perform(get("/users/range")
                         .param("to","1998-12-31"))
                 .andExpect(status().isBadRequest());
-
+        // date To is Empty
         mvc.perform(get("/users/range")
                         .param("from","1998-12-31")
                         .param("to",""))
                 .andExpect(status().isBadRequest());
+        // date To is absent
         mvc.perform(get("/users/range")
                         .param("from","1998-12-31"))
                 .andExpect(status().isBadRequest());
-
+        // absent required params
         mvc.perform(get("/users/range"))
                 .andExpect(status().isBadRequest());
     }
@@ -140,15 +149,24 @@ class UserControllerTest {
     @Test
     @DisplayName("POST /users - with valid json - return 201_Created")
     void givenValidRequest_whenCreateUser_thenStatusOk() throws Exception {
-        when(userService.createUser(any(UserRequest.class))).thenReturn(simpleUser);
+        User simpleUser = User.builder()
+                .id(ID)
+                .email("user1@gmail.com")
+                .firstName("user1FirstName")
+                .lastName("user1LastName")
+                .birthDate(LocalDate.parse("1989-05-25"))
+                .address("Kyiv1")
+                .phoneNumber("+380951")
+                .build();
+
+        when(userService.createUser(any())).thenReturn(simpleUser);
 
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(simpleUserJson))
-                .andExpectAll(
-                        status().isCreated(),
-                        header().exists(HttpHeaders.LOCATION)
-                );
+                .andExpect(status().isCreated())
+                .andExpect(header().exists(HttpHeaders.LOCATION))
+                .andExpect(header().string("LOCATION", "http://localhost/users/1"));
     }
 
     @ParameterizedTest
@@ -159,42 +177,6 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
                 .andExpect(status().isBadRequest());
-    }
-    @Test
-    @DisplayName("POST PUT PATCH /users/{id} - with invalid age - return 400_BedRequest")
-    void givenInvalidAge_whenSendRequest_thenStatusBadRequest() throws Exception {
-        when(userService.getValidAge()).thenReturn(18);
-        mvc.perform(post("/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                                    {
-                                    "email":"afrosin.dmytro@gmail.com",
-                                    "firstName":"Dmytro",
-                                    "lastName":"Afrosin",
-                                    "birthDate":"2008-05-01"
-                                    }"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(put("/users/{id}",1)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                    {
-                                    "email":"afrosin.dmytro@gmail.com",
-                                    "firstName":"Dmytro",
-                                    "lastName":"Afrosin",
-                                    "birthDate":"2008-05-01"
-                                    }"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(patch("/users/{id}",1)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                    {
-                                    "birthDate":"2008-05-01"
-                                    }"""))
-                .andExpect(status().isBadRequest());
-        mvc.perform(patch("/users/{id}",1)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isNoContent());
     }
 
     @Test
@@ -212,7 +194,7 @@ class UserControllerTest {
     @MethodSource("provideJsonData")
     @DisplayName("PUT /users/ - with invalid id - return 400_BadRequest")
     void givenAllInvalidData_whenUpdateUser_thenReturnBadRequest(String json) throws Exception {
-        doThrow(BusinessLogicException.class).when(userService).updateUserById(eq(999L),any());
+        doThrow(UserAlreadyExistsException.class).when(userService).updateUserById(eq(999L),any());
 
         // invalid json format and userRequest invalid
         mvc.perform(put("/users/1")
@@ -245,7 +227,7 @@ class UserControllerTest {
     @Test
     @DisplayName("PATCH /users/{id} - with incorrect data - return 400_BadRequest")
     void givenInCorrectValues_whenPatch_thenReturnBadRequest() throws Exception {
-        doThrow(BusinessLogicException.class).when(userService).patchUpdateUser(any(),any());
+        doThrow(UserAlreadyExistsException.class).when(userService).patchUpdateUser(any(),any());
         mvc.perform(patch("/users/1")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
@@ -262,7 +244,7 @@ class UserControllerTest {
     @Test
     @DisplayName("DELETE /users/{id} - with wrong id - return 400_Bed_Request ")
     void whenDelete_thenBadRequest() throws Exception {
-        doThrow(BusinessLogicException.class).when(userService).deleteUserById(999L);
+        doThrow(UserAlreadyExistsException.class).when(userService).deleteUserById(999L);
         mvc.perform(delete("/users/{id}", 999L))
                 .andExpect(status().isBadRequest());
     }

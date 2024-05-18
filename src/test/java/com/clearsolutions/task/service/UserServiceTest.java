@@ -2,7 +2,7 @@ package com.clearsolutions.task.service;
 
 import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
-import com.clearsolutions.task.exception.BusinessLogicException;
+import com.clearsolutions.task.exception.UserAlreadyExistsException;
 import com.clearsolutions.task.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -99,7 +99,7 @@ class UserServiceTest {
 
         } catch (InvocationTargetException e) {
 
-            assertInstanceOf(BusinessLogicException.class, e.getCause());
+            assertInstanceOf(UserAlreadyExistsException.class, e.getCause());
 
             Field declaredField1 = userService.getClass().getDeclaredField("validAge");
             declaredField1.setAccessible(true);
@@ -124,7 +124,7 @@ class UserServiceTest {
     void givenFullCorrectUserRequest_whenCreateUserEmailExists_thenThrowException() {
         when(userRepository.existsByEmail(simpleUser.getEmail())).thenReturn(true);
 
-        assertThrows(BusinessLogicException.class, () -> userService.createUser(simpleUserRequest));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.createUser(simpleUserRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -170,7 +170,7 @@ class UserServiceTest {
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         Executable executable = () -> userService.updateUserById(999L, new UserRequest());
-        assertThrows(BusinessLogicException.class, executable);
+        assertThrows(UserAlreadyExistsException.class, executable);
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -179,7 +179,7 @@ class UserServiceTest {
         when(userRepository.findById(ID)).thenReturn(Optional.of(simpleUser));
         when(userRepository.existsByEmail(simpleUserRequest.getEmail())).thenReturn(true);
 
-        assertThrows(BusinessLogicException.class, () -> userService.updateUserById(ID, simpleUserRequest));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.updateUserById(ID, simpleUserRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -216,14 +216,14 @@ class UserServiceTest {
     void givenIncorrectId_whenDeleteUserById_thenThrowException() {
         when(userRepository.findById(ID)).thenReturn(Optional.empty());
 
-        assertThrows(BusinessLogicException.class, () -> userService.deleteUserById(ID));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.deleteUserById(ID));
     }
 
     @Test
     void givenIncorrectId_whenPatchUpdateUser_thenThrowException() {
         when(userRepository.findById(ID)).thenReturn(Optional.empty());
 
-        assertThrows(BusinessLogicException.class, () -> userService.patchUpdateUser(ID, new UserRequest()));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.patchUpdateUser(ID, new UserRequest()));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -236,7 +236,7 @@ class UserServiceTest {
         when(userRepository.findById(ID)).thenReturn(Optional.of(simpleUser));
         when(userRepository.existsByEmail(userRequest.getEmail())).thenReturn(true);
 
-        assertThrows(BusinessLogicException.class, () -> userService.patchUpdateUser(ID, userRequest));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.patchUpdateUser(ID, userRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -249,7 +249,7 @@ class UserServiceTest {
         when(userRepository.findById(ID)).thenReturn(Optional.of(simpleUser));
         when(userRepository.existsByEmail(userRequest.getEmail())).thenReturn(true);
 
-        assertThrows(BusinessLogicException.class, () -> userService.patchUpdateUser(ID, userRequest));
+        assertThrows(UserAlreadyExistsException.class, () -> userService.patchUpdateUser(ID, userRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 

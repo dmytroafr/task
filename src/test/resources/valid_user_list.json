@@ -1,0 +1,182 @@
+[
+  {
+    "id": "1",
+    "email": "user1@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "birthDate": "1990-01-01",
+    "address": "123 Main St",
+    "phoneNumber": "+1234567890"
+  },
+  {
+    "id": "2",
+    "email": "user2@example.com",
+    "firstName": "Alice",
+    "lastName": "Smith",
+    "birthDate": "1985-05-15",
+    "address": "456 Elm St",
+    "phoneNumber": "+1987654321"
+  },
+  {
+    "id": "3",
+    "email": "user3@example.com",
+    "firstName": "Bob",
+    "lastName": "Johnson",
+    "birthDate": "1982-11-30",
+    "address": "789 Oak St",
+    "phoneNumber": "+1449876234"
+  },
+  {
+    "id": "4",
+    "email": "user4@example.com",
+    "firstName": "Emily",
+    "lastName": "Brown",
+    "birthDate": "1978-07-20",
+    "address": "101 Pine St",
+    "phoneNumber": "+1765432987"
+  },
+  {
+    "id": "5",
+    "email": "user5@example.com",
+    "firstName": "Michael",
+    "lastName": "Wilson",
+    "birthDate": "1989-03-10",
+    "address": "222 Cedar St",
+    "phoneNumber": "+1346798210"
+  },
+  {
+    "id": "6",
+    "email": "user6@example.com",
+    "firstName": "Sophia",
+    "lastName": "Martinez",
+    "birthDate": "1983-09-05",
+    "address": "333 Maple St",
+    "phoneNumber": "+1887654321"
+  },
+  {
+    "id": "7",
+    "email": "user7@example.com",
+    "firstName": "David",
+    "lastName": "Taylor",
+    "birthDate": "1980-12-25",
+    "address": "444 Birch St",
+    "phoneNumber": "+1555123498"
+  },
+  {
+    "id": "8",
+    "email": "user8@example.com",
+    "firstName": "Emma",
+    "lastName": "Thompson",
+    "birthDate": "1975-04-15",
+    "address": "555 Walnut St",
+    "phoneNumber": "+1654987234"
+  },
+  {
+    "id": "9",
+    "email": "user9@example.com",
+    "firstName": "James",
+    "lastName": "Lee",
+    "birthDate": "1987-08-30",
+    "address": "666 Sycamore St",
+    "phoneNumber": "+1223344556"
+  },
+  {
+    "id": "10",
+    "email": "user10@example.com",
+    "firstName": "Olivia",
+    "lastName": "Clark",
+    "birthDate": "1984-06-20",
+    "address": "777 Hickory St",
+    "phoneNumber": "+1777666555"
+  },
+  {
+    "id": "11",
+    "email": "user11@example.com",
+    "firstName": "Daniel",
+    "lastName": "Lewis",
+    "birthDate": "1981-02-10",
+    "address": "888 Pine St",
+    "phoneNumber": "+1999888777"
+  },
+  {
+    "id": "12",
+    "email": "user12@example.com",
+    "firstName": "Ava",
+    "lastName": "Walker",
+    "birthDate": "1979-10-05",
+    "address": "999 Oak St",
+    "phoneNumber": "+1888777666"
+  },
+  {
+    "id": "13",
+    "email": "user13@example.com",
+    "firstName": "William",
+    "lastName": "White",
+    "birthDate": "1986-11-15",
+    "address": "123 Elm St",
+    "phoneNumber": "+1666555444"
+  },
+  {
+    "id": "14",
+    "email": "user14@example.com",
+    "firstName": "Isabella",
+    "lastName": "Harris",
+    "birthDate": "1976-03-25",
+    "address": "456 Cedar St",
+    "phoneNumber": "+1555666777"
+  },
+  {
+    "id": "15",
+    "email": "user15@example.com",
+    "firstName": "Alexander",
+    "lastName": "King",
+    "birthDate": "1988-09-10",
+    "address": "789 Walnut St",
+    "phoneNumber": "+1777888999"
+  },
+  {
+    "id": "16",
+    "email": "user16@example.com",
+    "firstName": "Mia",
+    "lastName": "Green",
+    "birthDate": "1980-05-20",
+    "address": "101 Sycamore St",
+    "phoneNumber": "+1666777888"
+  },
+  {
+    "id": "17",
+    "email": "user17@example.com",
+    "firstName": "Ethan",
+    "lastName": "Evans",
+    "birthDate": "1977-07-30",
+    "address": "222 Birch St",
+    "phoneNumber": "+1333444555"
+  },
+  {
+    "id": "18",
+    "email": "user18@example.com",
+    "firstName": "Charlotte",
+    "lastName": "Baker",
+    "birthDate": "1983-01-05",
+    "address": "333 Hickory St",
+    "phoneNumber": "+1888333444"
+  },
+  {
+    "id": "19",
+    "email": "user19@example.com",
+    "firstName": "Benjamin",
+    "lastName": "Adams",
+    "birthDate": "1989-04-15",
+    "address": "444 Maple St",
+    "phoneNumber": "+1999222333"
+  },
+  {
+    "id": "20",
+    "email": "user20@example.com",
+    "firstName": "Ben",
+    "lastName": "A",
+    "birthDate": "1981-04-15",
+    "address": "444 Mle St",
+    "phoneNumber": "+139222333"
+  }
+]

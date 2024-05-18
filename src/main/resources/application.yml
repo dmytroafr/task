@@ -7,5 +7,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: create-drop
+    show-sql: true
+
 request:
   age: 18
