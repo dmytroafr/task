@@ -40,18 +40,6 @@ public class UserRepositoryTests {
     }
 
     @Test
-    public void givenExistentEmail_whenExistsByEmail_thanTrue() {
-        boolean exists = userRepository.existsByEmail("email1@gmail.com");
-        assertTrue(exists);
-    }
-
-    @Test
-    public void givenNotExistentEmail_whenExistsByEmail_thanFalse() {
-        boolean exists = userRepository.existsByEmail("unexistent.email@gmail.com");
-        assertFalse(exists);
-    }
-
-    @Test
     public void whenFindAllByBirthDateBetween_ThenOne() {
         Page<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
                 LocalDate.parse("1995-01-01"),

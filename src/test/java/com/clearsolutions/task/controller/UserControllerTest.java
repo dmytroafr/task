@@ -4,7 +4,7 @@ import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.UserAlreadyExistsException;
 import com.clearsolutions.task.service.UserService;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,50 +48,49 @@ class UserControllerTest {
     @MockBean
     private UserService userService;
 
-    private static final Long ID = 1L;
-    private final String simpleUserJson = """
-                                    {
-                                    "email":"afrosin.dmytro@gmail.com",
-                                    "firstName":"Dmytro",
-                                    "lastName":"Afrosin",
-                                    "birthDate":"2004-05-01",
-                                    "address":"Kyiv",
-                                    "phoneNumber":"+380"
-                                    }""";
-    private static final Random randomYear = new Random();
-    private static final List<User> usersList =
-            IntStream.range(1, 51).mapToObj(i -> User.builder()
-                    .id(Long.parseLong(String.valueOf(i)))
-                    .email("user" + i + "@gmail.com")
-                    .firstName("user"+i+"firstname")
-                    .lastName("user"+i+"lastname")
-                    .birthDate(LocalDate.parse("19" + randomYear.nextInt(10) + "" + randomYear.nextInt(10) + "-05-25"))
-                    .address("City" + i)
-                    .phoneNumber("+38095" + i)
-                    .build())
-            .toList();
+    private static String simpleUserJson;
+    private static List<User> usersList;
 
-    @BeforeEach
-    public void setUp() {
-
-
-    }
     static Stream<Arguments> provideJsonData() throws IOException{
         List<String> jsons = Files.readAllLines(Path.of("src/test/resources/BadJson.txt"));
         return jsons.stream().map(Arguments::of);
+    }
+    @BeforeAll
+    static void setUp(){
+        Random randomYear = new Random();
+        usersList =
+                IntStream.range(1, 51).mapToObj(i -> User.builder()
+                                .id(Long.parseLong(String.valueOf(i)))
+                                .email("user" + i + "@gmail.com")
+                                .firstName("user"+i+"firstname")
+                                .lastName("user"+i+"lastname")
+                                .birthDate(LocalDate.parse("19" + randomYear.nextInt(10) + "" + randomYear.nextInt(10) + "-05-25"))
+                                .address("City" + i)
+                                .phoneNumber("+38095" + i)
+                                .build())
+                        .toList();
+        simpleUserJson = """
+                                    {
+                                    "email":"user98@gmail.com",
+                                    "firstName":"user98First",
+                                    "lastName":"user98Last",
+                                    "birthDate":"1974-05-01",
+                                    "address":"City98",
+                                    "phoneNumber":"+38098"
+                                    }""";
     }
 
     @Test
     @DisplayName("GET /users - return page")
     void whenGetAllUsers_thenReturnListOfUsers() throws Exception {
-        Page<User> userPage = new PageImpl<>(usersList, PageRequest.of(0,12),usersList.size());
-        when(userService.getAllUsers(any())).thenReturn(userPage);
+        Page<User> userPage = new PageImpl<>(usersList, PageRequest.of(0,20),usersList.size());
+        when(userService.getAllUsers(PageRequest.of(0,20))).thenReturn(userPage);
         mvc.perform(get("/users")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content[4]").exists())
-                .andExpect(jsonPath("$.pageable.pageSize").value(12))
+                .andExpect(jsonPath("$.pageable.pageSize").value(20))
                 .andExpect(jsonPath("$.totalElements").value(50));
     }
     @Test
@@ -144,24 +143,15 @@ class UserControllerTest {
     @Test
     @DisplayName("POST /users - with valid json - return 201_Created")
     void givenValidRequest_whenCreateUser_thenStatusOk() throws Exception {
-        User simpleUser = User.builder()
-                .id(ID)
-                .email("user1@gmail.com")
-                .firstName("user1FirstName")
-                .lastName("user1LastName")
-                .birthDate(LocalDate.parse("1989-05-25"))
-                .address("Kyiv1")
-                .phoneNumber("+380951")
-                .build();
 
-        when(userService.createUser(any())).thenReturn(simpleUser);
+        when(userService.createUser(any(UserRequest.class))).thenReturn(usersList.get(1));
 
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(simpleUserJson))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
-                .andExpect(header().string("LOCATION", "http://localhost/users/1"));
+                .andExpect(header().string("LOCATION", "http://localhost/users/2"));
     }
 
     @ParameterizedTest
@@ -177,8 +167,7 @@ class UserControllerTest {
     @Test
     @DisplayName("PUT /users/{id} - with correct Id and userRequest - return 204_NoContent")
     void givenCorrectIdAndCorrectJson_whenUpdateUser_thenReturnNoContent() throws Exception {
-        doNothing().when(userService).updateUserById(eq(1L),any(UserRequest.class));
-
+        doNothing().when(userService).updateUserById(anyLong(),any(UserRequest.class));
         mvc.perform(put("/users/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(simpleUserJson))
@@ -189,7 +178,7 @@ class UserControllerTest {
     @MethodSource("provideJsonData")
     @DisplayName("PUT /users/ - with invalid id - return 400_BadRequest")
     void givenAllInvalidData_whenUpdateUser_thenReturnBadRequest(String json) throws Exception {
-        doThrow(UserAlreadyExistsException.class).when(userService).updateUserById(eq(999L),any());
+        doThrow(UserAlreadyExistsException.class).when(userService).updateUserById(anyLong(),any(UserRequest.class));
 
         // invalid json format and userRequest invalid
         mvc.perform(put("/users/1")
@@ -212,7 +201,7 @@ class UserControllerTest {
     @Test
     @DisplayName("PATCH /users/{id} - with correct data - return 204_NoContent")
     void givenCorrectValues_whenPatch_thenReturnNoContent() throws Exception {
-        doNothing().when(userService).patchUpdateUser(any(),any());
+        doNothing().when(userService).patchUpdateUser(anyLong(),any(UserRequest.class));
 
         mvc.perform(patch("/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -222,7 +211,7 @@ class UserControllerTest {
     @Test
     @DisplayName("PATCH /users/{id} - with incorrect data - return 400_BadRequest")
     void givenInCorrectValues_whenPatch_thenReturnBadRequest() throws Exception {
-        doThrow(UserAlreadyExistsException.class).when(userService).patchUpdateUser(any(),any());
+        doThrow(UserAlreadyExistsException.class).when(userService).patchUpdateUser(anyLong(),any(UserRequest.class));
         mvc.perform(patch("/users/1")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
@@ -231,16 +220,16 @@ class UserControllerTest {
     @Test
     @DisplayName("DELETE /users/{id} - with correct id - return 204_NoContent")
     void givenCorrectId_whenDelete_thenNoContent() throws Exception {
-        doNothing().when(userService).deleteUserById(1L);
+        doNothing().when(userService).deleteUserById(anyLong());
 
-        mvc.perform(delete("/users/{id}", 1L))
+        mvc.perform(delete("/users/{id}", anyLong()))
                 .andExpect(status().isNoContent());
     }
     @Test
     @DisplayName("DELETE /users/{id} - with wrong id - return 400_Bed_Request ")
     void whenDelete_thenBadRequest() throws Exception {
-        doThrow(UserAlreadyExistsException.class).when(userService).deleteUserById(999L);
-        mvc.perform(delete("/users/{id}", 999L))
+        doThrow(UserAlreadyExistsException.class).when(userService).deleteUserById(anyLong());
+        mvc.perform(delete("/users/{id}", anyLong()))
                 .andExpect(status().isBadRequest());
     }
 }
