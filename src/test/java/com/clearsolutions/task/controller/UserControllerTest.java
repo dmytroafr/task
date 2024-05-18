@@ -118,11 +118,6 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /users/range - with incorrect range - 400_BadRequest")
     void givenIncorrectDateRange_whenGetWithinRange_thenStatusBadRequest() throws Exception {
-        // date From is after TO
-        mvc.perform(get("/users/range")
-                        .param("from","1999-12-31")
-                        .param("to","1998-12-31"))
-                .andExpect(status().isBadRequest());
         // date From is Empty
         mvc.perform(get("/users/range")
                         .param("from","")

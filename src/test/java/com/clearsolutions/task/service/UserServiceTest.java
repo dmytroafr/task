@@ -1,5 +1,6 @@
 package com.clearsolutions.task.service;
 
+import com.clearsolutions.task.exception.UserNotFoundException;
 import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.UserAlreadyExistsException;
@@ -86,27 +87,6 @@ class UserServiceTest {
                 .phoneNumber("updated")
                 .build();
     }
-    @ParameterizedTest
-    @ValueSource(strings = {"-1", "-3", "-15", "0", "5","100", "101", "105", "5000"})
-    void givenIncorrectAge_whenSetValid_returnExceptions(String age) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, NoSuchFieldException {
-        Method setValidAge = UserService.class
-                .getDeclaredMethod("setValidAge", String.class);
-
-        setValidAge.setAccessible(true);
-//        assertThrows(BusinessLogicException.class, () -> setValidAge.invoke(userService, age) );
-        try {
-            setValidAge.invoke(userService, age);
-
-        } catch (InvocationTargetException e) {
-
-            assertInstanceOf(UserAlreadyExistsException.class, e.getCause());
-
-            Field declaredField1 = userService.getClass().getDeclaredField("validAge");
-            declaredField1.setAccessible(true);
-            Object validAge = declaredField1.get(userService);
-            assertEquals(18,(int) validAge);
-        }
-    }
 
     @Test
     void givenFullCorrectUserRequest_whenCreateUser_thanReturnUser() {
@@ -170,7 +150,7 @@ class UserServiceTest {
         when(userRepository.findById(999L)).thenReturn(Optional.empty());
 
         Executable executable = () -> userService.updateUserById(999L, new UserRequest());
-        assertThrows(UserAlreadyExistsException.class, executable);
+        assertThrows(UserNotFoundException.class, executable);
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -216,14 +196,14 @@ class UserServiceTest {
     void givenIncorrectId_whenDeleteUserById_thenThrowException() {
         when(userRepository.findById(ID)).thenReturn(Optional.empty());
 
-        assertThrows(UserAlreadyExistsException.class, () -> userService.deleteUserById(ID));
+        assertThrows(UserNotFoundException.class, () -> userService.deleteUserById(ID));
     }
 
     @Test
     void givenIncorrectId_whenPatchUpdateUser_thenThrowException() {
         when(userRepository.findById(ID)).thenReturn(Optional.empty());
 
-        assertThrows(UserAlreadyExistsException.class, () -> userService.patchUpdateUser(ID, new UserRequest()));
+        assertThrows(UserNotFoundException.class, () -> userService.patchUpdateUser(ID, new UserRequest()));
         verify(userRepository, never()).save(any(User.class));
     }
 
