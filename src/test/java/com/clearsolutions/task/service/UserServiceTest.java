@@ -1,19 +1,16 @@
 package com.clearsolutions.task.service;
 
-import com.clearsolutions.task.User;
+import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.repository.UserRepository;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -25,13 +22,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -114,11 +109,11 @@ class UserServiceTest {
     }
 
     @Test
-    void givenFullCorrectUserRequest_whenRegisterUser_thanReturnUser() {
+    void givenFullCorrectUserRequest_whenCreateUser_thanReturnUser() {
         when(userRepository.existsByEmail(simpleUser.getEmail())).thenReturn(false);
         when(userRepository.save(any())).thenReturn(simpleUser);
 
-        User registeredUser = userService.registerUser(simpleUserRequest);
+        User registeredUser = userService.createUser(simpleUserRequest);
 
         assertNotNull(registeredUser);
         assertNotNull(registeredUser.getId());
@@ -126,10 +121,10 @@ class UserServiceTest {
     }
 
     @Test
-    void givenFullCorrectUserRequest_whenRegisterUserEmailExists_thenThrowException() {
+    void givenFullCorrectUserRequest_whenCreateUserEmailExists_thenThrowException() {
         when(userRepository.existsByEmail(simpleUser.getEmail())).thenReturn(true);
 
-        assertThrows(BusinessLogicException.class, () -> userService.registerUser(simpleUserRequest));
+        assertThrows(BusinessLogicException.class, () -> userService.createUser(simpleUserRequest));
         verify(userRepository, never()).save(any(User.class));
     }
 

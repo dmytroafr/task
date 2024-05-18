@@ -1,9 +1,10 @@
-package com.clearsolutions.task;
+package com.clearsolutions.task.model;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+
 @Data
 @Builder
 @Entity
@@ -16,8 +17,11 @@ public class User {
     private Long id;
     @Column(unique = true)
     private String email;
+    @Column(nullable = false)
     private String firstName;
+    @Column(nullable = false)
     private String lastName;
+    @Column(nullable = false)
     private LocalDate birthDate;
     private String address;
     private String phoneNumber;

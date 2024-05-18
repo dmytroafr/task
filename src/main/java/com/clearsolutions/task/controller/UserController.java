@@ -1,7 +1,7 @@
 package com.clearsolutions.task.controller;
 
-import com.clearsolutions.task.User;
-import com.clearsolutions.task.dto.PatchValidation;
+import com.clearsolutions.task.model.User;
+import com.clearsolutions.task.validation.PatchValidation;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.service.UserService;
@@ -16,7 +16,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
@@ -41,7 +40,7 @@ public class UserController {
                                                          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
                                                          Pageable pageable) {
         if (fromDate.isAfter(toDate)) {
-            throw new BusinessLogicException ("Invalid date range");
+            throw new BusinessLogicException("Invalid date range");
         }
         Page<User> allUsers = userService.getAllUsersWithin(fromDate, toDate, pageable);
         return ResponseEntity.ok(allUsers);
@@ -49,12 +48,7 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<Void> createUser(@Valid @RequestBody UserRequest userRequest, UriComponentsBuilder uriBuilder) {
-
-        if (userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {
-            throw new BusinessLogicException ("Invalid birth date");
-        }
-
-        User user = userService.registerUser(userRequest);
+        User user = userService.createUser(userRequest);
         URI location = uriBuilder
                 .path("/users/{id}")
                 .buildAndExpand(user.getId())
@@ -65,22 +59,13 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateUser(@PathVariable Long id,
                                            @Valid @RequestBody UserRequest userRequest) {
-
-        if (userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {
-            throw new BusinessLogicException ("Invalid birth date");
-        }
         userService.updateUserById(id, userRequest);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<Void> patchUser(@PathVariable Long id,
-                                         @Validated(PatchValidation.class) @RequestBody UserRequest userRequest){
-        Optional<LocalDate> localDateOptional = Optional.ofNullable(userRequest.getBirthDate());
-        if (localDateOptional.isPresent()
-            && userRequest.getBirthDate().plusYears(userService.getValidAge()).isAfter(LocalDate.now())) {
-            throw new BusinessLogicException ("Invalid birth date");
-        }
+                                          @Validated(PatchValidation.class) @RequestBody UserRequest userRequest) {
         userService.patchUpdateUser(id, userRequest);
         return ResponseEntity.noContent().build();
     }

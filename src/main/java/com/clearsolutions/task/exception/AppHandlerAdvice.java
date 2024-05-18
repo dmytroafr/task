@@ -60,6 +60,7 @@ public class AppHandlerAdvice {
         map.put("errorMessage", message);
         return ResponseEntity.badRequest().body(map);
     }
+
     @ExceptionHandler({MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Object> handleException(MethodArgumentTypeMismatchException http) {
         Map<String, String> map = new HashMap<>();

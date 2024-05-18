@@ -1,6 +1,6 @@
 package com.clearsolutions.task.controller;
 
-import com.clearsolutions.task.User;
+import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.BusinessLogicException;
 import com.clearsolutions.task.service.UserService;
@@ -140,7 +140,7 @@ class UserControllerTest {
     @Test
     @DisplayName("POST /users - with valid json - return 201_Created")
     void givenValidRequest_whenCreateUser_thenStatusOk() throws Exception {
-        when(userService.registerUser(any(UserRequest.class))).thenReturn(simpleUser);
+        when(userService.createUser(any(UserRequest.class))).thenReturn(simpleUser);
 
         mvc.perform(post("/users")
                 .contentType(MediaType.APPLICATION_JSON)

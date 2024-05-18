@@ -1,6 +1,6 @@
 package com.clearsolutions.task.repository;
 
-import com.clearsolutions.task.User;
+import com.clearsolutions.task.model.User;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
