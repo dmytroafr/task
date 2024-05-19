@@ -14,6 +14,8 @@ import java.lang.annotation.Target;
 @Constraint(validatedBy = {AgeValidator.class})
 public @interface ValidAge {
     String message() default "User must be at least {validAge} years old";
+
     Class<?>[] groups() default {};
+
     Class<? extends Payload>[] payload() default {};
 }

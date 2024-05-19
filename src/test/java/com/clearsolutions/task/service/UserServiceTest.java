@@ -4,10 +4,17 @@ import com.clearsolutions.task.dto.UserRequest;
 import com.clearsolutions.task.exception.UserNotFoundException;
 import com.clearsolutions.task.model.User;
 import com.clearsolutions.task.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -18,18 +25,22 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(SpringExtension.class)
-@Import(UserService2Test.UserServiceTestConfiguration.class)
-class UserService2Test {
+@Import(UserServiceTest.UserServiceTestConfiguration.class)
+class UserServiceTest {
 
     @MockBean
     public UserRepository userRepository;
@@ -45,41 +56,50 @@ class UserService2Test {
         }
     }
 
-    private static List<User> usersList;
+    private static final Random random = new Random();
+    private static final List<User> usersList =
+            IntStream.range(1, 51).mapToObj(i -> User.builder()
+                            .id(Long.parseLong(String.valueOf(i)))
+                            .email("user" + i + "@gmail.com")
+                            .firstName("user" + i + "firstname")
+                            .lastName("user" + i + "lastname")
+                            .birthDate(LocalDate.parse("19" + random.nextInt(10) + "" + random.nextInt(10) + "-05-25"))
+                            .address("City" + i)
+                            .phoneNumber("+38095" + i)
+                            .build())
+                    .toList();
 
-    @BeforeAll
-    static void setUp(){
-        Random randomYear = new Random();
-        usersList =
-                IntStream.range(1, 51).mapToObj(i -> User.builder()
-                                .id(Long.parseLong(String.valueOf(i)))
-                                .email("user" + i + "@gmail.com")
-                                .firstName("user"+i+"firstname")
-                                .lastName("user"+i+"lastname")
-                                .birthDate(LocalDate.parse("19" + randomYear.nextInt(10) + "" + randomYear.nextInt(10) + "-05-25"))
-                                .address("City" + i)
-                                .phoneNumber("+38095" + i)
-                                .build())
-                        .toList();
+    private static Stream<Arguments> provideJsonData() throws IOException {
+        List<String> jsons = Files.readAllLines(Path.of("src/test/resources/json_for_PATCH.txt"));
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        return jsons.stream().map(s -> {
+            try {
+                UserRequest userRequest = mapper.readValue(s, UserRequest.class);
+                return Arguments.of(userRequest);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Test
+    @DisplayName("Get all users")
     void whenGetAllUsers_thenReturnPageable() {
         PageRequest pageRequest = PageRequest.of(0, 20);
         int listSize = usersList.size();
 
-        Page<User> userPage = new PageImpl<>(usersList,pageRequest,usersList.size());
+        Page<User> userPage = new PageImpl<>(usersList, pageRequest, usersList.size());
         when(userRepository.findAll(any(PageRequest.class))).thenReturn(userPage);
 
         Page<User> allUsers = userService.getAllUsers(pageRequest);
-
-        assertEquals(pageRequest.getPageSize(),listSize);
-        assertEquals(listSize,allUsers.getNumberOfElements());
-        assertEquals(listSize,allUsers.getTotalElements());
-        assertEquals(3,allUsers.getTotalPages());
+        assertEquals(listSize, allUsers.getNumberOfElements());
+        assertEquals(listSize, allUsers.getTotalElements());
+        assertEquals(3, allUsers.getTotalPages());
     }
 
     @Test
+    @DisplayName("Get all users within range")
     void givenCorrectDates_whenGetAllUsersWithin_thenReturnPageable() {
         LocalDate fromDate = LocalDate.parse("1990-01-01");
         LocalDate toDate = LocalDate.parse("1997-12-31");
@@ -89,69 +109,174 @@ class UserService2Test {
                         user.getBirthDate().isBefore(toDate))
                 .toList();
 
-        Page<User> userPage = new PageImpl<>(list,PageRequest.of(0,20),list.size());
-        when(userRepository.findAllByBirthDateBetween(any(LocalDate.class),any(LocalDate.class),any(PageRequest.class))).thenReturn(userPage);
+        Page<User> userPage = new PageImpl<>(list, PageRequest.of(0, 20), list.size());
+        when(userRepository.findAllByBirthDateBetween(any(LocalDate.class), any(LocalDate.class), any(PageRequest.class))).thenReturn(userPage);
 
-        Page<User> allUsersWithin = userService.getAllUsersWithin(fromDate, toDate, PageRequest.of(0,20));
+        Page<User> allUsersWithin = userService.getAllUsersWithin(fromDate, toDate, PageRequest.of(0, 20));
 
-        assertEquals(list.size(),allUsersWithin.getTotalElements());
-        assertEquals(list.size(),allUsersWithin.getNumberOfElements());
+        assertEquals(list.size(), allUsersWithin.getTotalElements());
+        assertEquals(list.size(), allUsersWithin.getNumberOfElements());
     }
 
     @Test
+    @DisplayName("Get All Users within wrong Range")
     void givenIncorrectDates_whenGetAllUsersWithin_thenReturnException() {
         LocalDate fromDate = LocalDate.parse("1990-01-01");
         LocalDate toDate = LocalDate.parse("1997-12-31");
 
         assertThrows(IllegalArgumentException.class,
-                ()->userService.getAllUsersWithin(toDate,fromDate,PageRequest.of(0,20)));
+                () -> userService.getAllUsersWithin(toDate, fromDate, PageRequest.of(0, 20)));
     }
+
     @Test
-    void createUser() {
-        User userFromList = usersList.get(7);
-        UserRequest build = UserRequest.builder()
-                .email(userFromList.getEmail())
-                .firstName(userFromList.getFirstName())
-                .lastName(userFromList.getLastName())
-                .birthDate(userFromList.getBirthDate())
-                .address(userFromList.getAddress())
-                .phoneNumber(userFromList.getPhoneNumber())
+    @DisplayName("Create new user")
+    void whenCreateUser_thenReturnUser() {
+        UserRequest userRequest
+                = UserRequest.builder()
+                .email("created@gmail.com")
+                .firstName("createdFirstName")
+                .lastName("createdLastName")
+                .birthDate(LocalDate.now().minusYears(random.nextLong(18, 99)))
+                .address("CreatedCity")
+                .phoneNumber("+3987435234234")
                 .build();
-        when(userRepository.save(any(User.class))).thenReturn(userFromList);
 
-        User user = userService.createUser(build);
 
-        assertNotNull(user);
-        assertNotNull(user.getId());
-        assertEquals(userFromList.getId(), user.getId());
-        assertEquals(userFromList.getEmail(), user.getEmail());
-        assertEquals(userFromList.getFirstName(), user.getFirstName());
-        assertEquals(userFromList.getLastName(), user.getLastName());
-        assertEquals(userFromList.getBirthDate(), user.getBirthDate());
-        assertEquals(userFromList.getAddress(), user.getAddress());
-        assertEquals(userFromList.getPhoneNumber(),user.getPhoneNumber());
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        userService.createUser(userRequest);
+
+        verify(userRepository).save(userCaptor.capture());
+        User capturedUser = userCaptor.getValue();
+
+        assertNotNull(capturedUser);
+        assertEquals(userRequest.getEmail(), capturedUser.getEmail());
+        assertEquals(userRequest.getFirstName(), capturedUser.getFirstName());
+        assertEquals(userRequest.getLastName(), capturedUser.getLastName());
+        assertEquals(userRequest.getBirthDate(), capturedUser.getBirthDate());
+        assertEquals(userRequest.getAddress(), capturedUser.getAddress());
+        assertEquals(userRequest.getPhoneNumber(), capturedUser.getPhoneNumber());
     }
 
     @Test
-    void updateUserById() {
+    @DisplayName("Update user with wrong id")
+    void givenWrongId_whenUpdateUser_thenReturnException() {
+        when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> userService.updateUser(random.nextLong(), any(UserRequest.class)));
     }
 
     @Test
+    @DisplayName("Update user by id")
+    void givenUserRequest_whenUpdateUser_thenReturn() {
+        User userFromDb = usersList.get(random.nextInt(50));
+        Optional<User> optionalUserFromDb = Optional.of(userFromDb);
+
+        when(userRepository.findById(anyLong())).thenReturn(optionalUserFromDb);
+
+        UserRequest userRequest = UserRequest.builder()
+                .email("updated@gmail.com")
+                .firstName("UpdatedFirstName")
+                .lastName("UpdatedLastName")
+                .birthDate(LocalDate.now().minusYears(random.nextLong(18, 99)))
+                .build();
+
+        userService.updateUser(userFromDb.getId(), userRequest);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        verify(userRepository).save(userCaptor.capture());
+        User capturedUser = userCaptor.getValue();
+
+        assertEquals(userFromDb.getId(), capturedUser.getId());
+        assertEquals(userRequest.getEmail(), capturedUser.getEmail());
+        assertEquals(userRequest.getFirstName(), capturedUser.getFirstName());
+        assertEquals(userRequest.getLastName(), capturedUser.getLastName());
+        assertEquals(userRequest.getBirthDate(), capturedUser.getBirthDate());
+        assertNull(capturedUser.getAddress());
+        assertNull(capturedUser.getPhoneNumber());
+    }
+
+    @Test
+    @DisplayName("Update user by id with full request")
+    void givenFullUserRequest_whenUpdateUser_thenReturn() {
+        User userFromDb = usersList.get(random.nextInt(50));
+        Optional<User> optionalUserFromDb = Optional.of(userFromDb);
+
+        when(userRepository.findById(anyLong())).thenReturn(optionalUserFromDb);
+
+        UserRequest userRequest = UserRequest.builder()
+                .email("updated@gmail.com")
+                .firstName("UpdatedFirstName")
+                .lastName("UpdatedLastName")
+                .birthDate(LocalDate.now().minusYears(random.nextLong(18, 99)))
+                .address("UpdatedCity")
+                .phoneNumber("+38093485345")
+                .build();
+
+        userService.updateUser(userFromDb.getId(), userRequest);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        verify(userRepository).save(userCaptor.capture());
+        User capturedUser = userCaptor.getValue();
+
+        assertEquals(userFromDb.getId(), capturedUser.getId());
+        assertEquals(userRequest.getEmail(), capturedUser.getEmail());
+        assertEquals(userRequest.getFirstName(), capturedUser.getFirstName());
+        assertEquals(userRequest.getLastName(), capturedUser.getLastName());
+        assertEquals(userRequest.getBirthDate(), capturedUser.getBirthDate());
+        assertEquals(userRequest.getAddress(), capturedUser.getAddress());
+        assertEquals(userRequest.getPhoneNumber(), capturedUser.getPhoneNumber());
+    }
+
+
+    @Test
+    @DisplayName("Patch user by wrong id")
     void givenWrongId_whenPatchUpdateUser_thenReturnException() {
         when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class,
-                ()->userService.patchUpdateUser(87L,any(UserRequest.class)));
+                () -> userService.patchUpdateUser(random.nextLong(), any(UserRequest.class)));
     }
-//    @Test
-//    void givenWrongId_whenPatchUpdateUser_thenReturnException() {
-//
-//    }
+
+    @ParameterizedTest
+    @MethodSource("provideJsonData")
+    @DisplayName("Patch user with fields combinations")
+    void givenFields_whenPatchUser_thenReturnNoContent(UserRequest userRequest) {
+        User userFromDb = usersList.get(random.nextInt(50));
+        Optional<User> optionalUserFromDb = Optional.of(userFromDb);
+
+        when(userRepository.findById(anyLong())).thenReturn(optionalUserFromDb);
+
+        userService.patchUpdateUser(userFromDb.getId(), userRequest);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        verify(userRepository).save(userCaptor.capture());
+        User capturedUser = userCaptor.getValue();
+
+        if (userRequest.getEmail() != null) {
+            assertEquals(userRequest.getEmail(), capturedUser.getEmail());
+        }
+        if (userRequest.getFirstName() != null) {
+            assertEquals(userRequest.getFirstName(), capturedUser.getFirstName());
+        }
+        if (userRequest.getLastName() != null) {
+            assertEquals(userRequest.getLastName(), capturedUser.getLastName());
+        }
+        if (userRequest.getBirthDate() != null) {
+            assertEquals(userRequest.getBirthDate(), capturedUser.getBirthDate());
+        }
+        if (userRequest.getAddress() != null) {
+            assertEquals(userRequest.getAddress(), capturedUser.getAddress());
+        }
+        if (userRequest.getPhoneNumber() != null) {
+            assertEquals(userRequest.getPhoneNumber(), capturedUser.getPhoneNumber());
+        }
+    }
 
     @Test
-    @DisplayName(value = "Delete by existing id")
+    @DisplayName(value = "Delete user by id")
     void givenCorrectId_whenDeleteUserById_thenPerformDelete() {
-        Optional<User> optionalUser = Optional.of(usersList.get(0));
+        Optional<User> optionalUser = Optional.of(usersList.get(random.nextInt(50)));
         when(userRepository.findById(anyLong())).thenReturn(optionalUser);
         User user = optionalUser.get();
         doNothing().when(userRepository).delete(user);
@@ -162,7 +287,7 @@ class UserService2Test {
     }
 
     @Test
-    @DisplayName(value = "Delete by wrong id")
+    @DisplayName(value = "Delete user by wrong id")
     void givenIncorrectId_whenDeleteUserById_thenThrowException() {
         when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
 

@@ -56,7 +56,7 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateUser(@PathVariable Long id,
                                            @Validated(PutValidation.class) @RequestBody UserRequest userRequest) {
-        userService.updateUserById(id, userRequest);
+        userService.updateUser(id, userRequest);
         return ResponseEntity.noContent().build();
     }
 

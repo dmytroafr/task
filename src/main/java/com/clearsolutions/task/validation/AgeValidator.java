@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+
 @Component
 public class AgeValidator implements ConstraintValidator<ValidAge, LocalDate> {
 

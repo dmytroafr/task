@@ -55,7 +55,7 @@ public class UserRepositoryTests {
         Page<User> allByBirthDateBetween = userRepository.findAllByBirthDateBetween(
                 LocalDate.parse("1995-01-01"),
                 LocalDate.parse("1997-12-31"),
-                PageRequest.of(0,5));
+                PageRequest.of(0, 5));
 
         assertNotNull(allByBirthDateBetween);
         assertEquals(3, allByBirthDateBetween.getTotalElements());

@@ -17,6 +17,4 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 class TaskApplicationTests {
-
-
 }

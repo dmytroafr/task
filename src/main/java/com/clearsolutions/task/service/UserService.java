@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -36,13 +38,19 @@ public class UserService {
         return userRepository.save(newUser);
     }
 
-    public void updateUserById(Long id, UserRequest userRequest) {
+    public void updateUser(Long id, UserRequest userRequest) {
         User user = userRepository
                 .findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User with id " + id + " not found"));
+
         mapUserRequestToUser(userRequest, user);
-        user.setAddress(userRequest.getAddress() != null ? userRequest.getAddress() : null);
-        user.setPhoneNumber(userRequest.getPhoneNumber() != null ? userRequest.getPhoneNumber() : null);
+        if (Objects.isNull(userRequest.getAddress())) {
+            user.setAddress(null);
+        }
+        if (Objects.isNull(userRequest.getPhoneNumber())) {
+            user.setPhoneNumber(null);
+        }
+
         userRepository.save(user);
     }
 
@@ -68,23 +76,11 @@ public class UserService {
     }
 
     private void mapUserRequestToUser(UserRequest userRequest, User user) {
-        if (userRequest.getBirthDate() != null) {
-            user.setBirthDate(userRequest.getBirthDate());
-        }
-        if (userRequest.getEmail() != null) {
-            user.setEmail(userRequest.getEmail());
-        }
-        if (userRequest.getFirstName() != null) {
-            user.setFirstName(userRequest.getFirstName());
-        }
-        if (userRequest.getLastName() != null) {
-            user.setLastName(userRequest.getLastName());
-        }
-        if (userRequest.getAddress() != null) {
-            user.setAddress(userRequest.getAddress());
-        }
-        if (userRequest.getPhoneNumber() != null) {
-            user.setPhoneNumber(userRequest.getPhoneNumber());
-        }
+        Optional.ofNullable(userRequest.getEmail()).ifPresent(user::setEmail);
+        Optional.ofNullable(userRequest.getFirstName()).ifPresent(user::setFirstName);
+        Optional.ofNullable(userRequest.getLastName()).ifPresent(user::setLastName);
+        Optional.ofNullable(userRequest.getBirthDate()).ifPresent(user::setBirthDate);
+        Optional.ofNullable(userRequest.getAddress()).ifPresent(user::setAddress);
+        Optional.ofNullable(userRequest.getPhoneNumber()).ifPresent(user::setPhoneNumber);
     }
 }

@@ -27,18 +27,21 @@ public class AppHandlerAdvice {
                         fieldError -> fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage() : ""));
         return ResponseEntity.badRequest().body(collect);
     }
+
     @ExceptionHandler({UserAlreadyExistsException.class, IllegalArgumentException.class})
     public ResponseEntity<Object> handleException(Exception e) {
         Map<String, String> map = new HashMap<>();
-        map.put("Error", e.getMessage() );
+        map.put("Error", e.getMessage());
         return ResponseEntity.badRequest().body(map);
     }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Object> handleException(UserNotFoundException e) {
         Map<String, String> map = new HashMap<>();
         map.put("Error", e.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(map);
     }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Object> handleException(DataIntegrityViolationException e) {
         Map<String, String> map = new HashMap<>();
@@ -46,6 +49,7 @@ public class AppHandlerAdvice {
         map.put("Error", message);
         return ResponseEntity.badRequest().body(map);
     }
+
     @ExceptionHandler({DateTimeParseException.class})
     public ResponseEntity<Object> handleException(DateTimeParseException e) {
         Map<String, String> map = new HashMap<>();
@@ -53,6 +57,7 @@ public class AppHandlerAdvice {
         map.put("errorMessage", message);
         return ResponseEntity.badRequest().body(map);
     }
+
     @ExceptionHandler({HttpMessageNotReadableException.class})
     public ResponseEntity<Object> handleException(HttpMessageNotReadableException http) {
         Map<String, String> map = new HashMap<>();
@@ -60,6 +65,7 @@ public class AppHandlerAdvice {
         map.put("Error", message);
         return ResponseEntity.badRequest().body(map);
     }
+
     @ExceptionHandler({MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Object> handleException(MethodArgumentTypeMismatchException http) {
         Map<String, String> map = new HashMap<>();
